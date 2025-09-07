@@ -23,6 +23,8 @@ data/raw/
 data/*.zip
 data/*.tar
 data/*.gz
+data/*.csv
+data
 
 # --- Trained models & outputs ---
 models/
