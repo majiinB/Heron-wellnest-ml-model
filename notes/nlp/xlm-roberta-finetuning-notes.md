@@ -300,7 +300,9 @@ training_args = TrainingArguments(
 
 ---
 
-## Experiment 3
+## Experiment 4
+
+> Note: This experiment is flawed due to the fact that the oversampling was done on all the dataset (train, validation, test). So there is a strong chance that a data leak has occured.
 
 <details>
 <summary><b>My Notes</b></summary>
@@ -414,6 +416,188 @@ training_args = TrainingArguments(
 | 15000 | 0.491200      | 0.760953        | 0.767239 | 0.764089 |
 | **15500** | **0.495200**     | **0.752773**        | **0.771608** | **0.769353** ✅ |
 
+---
 
+## Experiment 5
+
+<details>
+<summary><b>My Notes</b></summary>
+
+- Used unbalanced dataset
+- No oversampling was done
+- Trainer used was normal (default)
+- Model performed bad with only 48% accuracy and F-1 Score of 38%
+
+</details>
 
 ---
+
+**Date:** 2025-10-08  
+**Model:** `xlm-roberta-base` (Pretrained)  
+
+**Dataset:** `dataset_2_broad_emotion - tweet_emotions.csv`  
+- Split: `train`, `validation`, `test`  
+- Number of samples:  
+  - Train: `25,596` 
+  - Validation: `6,400`  
+  - Test: `8,000`  
+- Preprocessing:  
+  - Min/Max text lengths: `3 - 151`  
+  - Removed rows: `Null and blank values "was removed"`  
+  - Tokenization: `truncation=True, padding="max_length", max_length=256`  
+  - Other transformations: `none`  
+
+**Training Arguments:**  
+```python
+training_args = TrainingArguments(
+    output_dir=MODEL_PATH_FINETUNE_2,
+
+    # Evaluation & saving
+    eval_strategy="steps",             # evaluate more frequently
+    eval_steps=500,                    # evaluate every 500 steps
+    save_strategy="steps",             # save every eval
+    save_steps=500,
+    save_total_limit=3,                # keep last 3 checkpoints
+
+    # Optimizer
+    learning_rate=2e-5,
+    warmup_ratio=0.1,                  # 10% warmup               
+    weight_decay=0.05,                 # helps reduce overfitting
+
+    # Batch size
+    per_device_train_batch_size=8,
+    per_device_eval_batch_size=8,
+    gradient_accumulation_steps=2,     # effective batch size 16
+
+    # Mixed precision
+    fp16=True,                         # faster training
+
+    # Training length
+    num_train_epochs=5,                # shorter to prevent overfitting
+    load_best_model_at_end=True,       # load checkpoint with best validation loss
+    metric_for_best_model="f1",  # choose metric to track best model
+
+    # Misc
+    dataloader_num_workers=4,
+    # logging_steps=100,                 # logs every 100 steps
+    # logging_dir=f"{MODEL_PATH_FINETUNE_1}/logs"
+)
+```
+**Epoch/Steps Result**
+| Step | Training Loss | Validation Loss | Accuracy | F1       |
+|:----:|:-------------:|:---------------:|:--------:|:--------:|
+| 500  | 1.602900      | 1.415967        | 0.454219 | 0.263413 |
+| 1000 | 1.427600      | 1.401772        | 0.472187 | 0.300180 |
+| 1500 | 1.398600      | 1.357724        | 0.472969 | 0.286967 |
+| 2000 | 1.341200      | 1.377093        | 0.467969 | 0.321229 |
+| 2500 | 1.309700      | 1.343992        | 0.478438 | 0.354484 |
+| 3000 | 1.311000      | 1.325892        | 0.496094 | 0.357454 |
+| 3500 | 1.232900      | 1.381535        | 0.490156 | 0.365585 |
+| 4000 | 1.231700      | 1.344173        | 0.491250 | 0.375893 |
+| 4500 | 1.234100      | 1.352110        | 0.492500 | 0.377188 |
+| 5000 | 1.174400      | 1.364862        | 0.490312 | 0.376701 |
+| 5500 | 1.118800      | 1.394938        | 0.492031 | 0.376390 |
+| 6000 | 1.133500      | 1.381920        | 0.488125 | 0.370647 |
+| 6500 | 1.090800      | 1.416036        | 0.488750 | 0.382577 |
+| 7000 | 1.047600      | 1.427585        | 0.486250 | 0.382788 |
+| 7500 | 1.038500      | 1.432306        | 0.485781 | 0.387449 |
+| 8000 | 1.023900      | 1.433498        | 0.485156 | 0.384731 |
+
+---
+
+## Experiment 5
+
+<details>
+<summary><b>My Notes</b></summary>
+
+- Used unbalanced dataset
+- No oversampling was done
+- Trainer used was normal (default)
+- Emotions were grouped into the following
+  - Positive (happiness, fun, enthusiasm, relief, love)
+  - Anxiety (worry)
+  - Sadness (sadness, empty, boredom)
+  - Anger (anger, hate)
+  - Surprise (kept separate)
+  - Neutral (baseline, later removed in final experiments).
+- We removed Neutral, and Surprise in this dataset
+- The model showed much more promising learning rate. Proving that Neutral or Surprise was introducing ambiguity to our model.
+- Training loss steadily decreases, which means the model is learning.
+- Validation loss initially decreases but then starts to increase after ~2500 steps → sign of overfitting.
+- Accuracy grows from ~0.58 at step 500 to ~0.62 at 5000+.
+- Gains are modest after 2500 steps.
+- F1 improves significantly from 0.32 → 0.51.
+- Best F1 = 0.5193 at step 5000, slightly higher than 5500.
+
+</details>
+
+---
+
+**Date:** 2025-10-08  
+**Model:** `xlm-roberta-base` (Pretrained)  
+
+**Dataset:** `dataset_2_broad_emotion - tweet_emotions.csv`  
+- Split: `train`, `validation`, `test`  
+- Number of samples:  
+  - Train: `18,671` 
+  - Validation: `4,668`  
+  - Test: `5,835`  
+- Preprocessing:  
+  - Min/Max text lengths: `3 - 151`  
+  - Removed rows: `Null and blank values "was removed"`  
+  - Tokenization: `truncation=True, padding="max_length", max_length=256`  
+  - Other transformations: `none`  
+
+**Training Arguments:**  
+```python
+training_args = TrainingArguments(
+    output_dir=MODEL_PATH_FINETUNE_2,
+
+    # Evaluation & saving
+    eval_strategy="steps",             # evaluate more frequently
+    eval_steps=500,                    # evaluate every 500 steps
+    save_strategy="steps",             # save every eval
+    save_steps=500,
+    save_total_limit=3,                # keep last 3 checkpoints
+
+    # Optimizer
+    learning_rate=2e-5,
+    warmup_ratio=0.1,                  # 10% warmup               
+    weight_decay=0.05,                 # helps reduce overfitting
+
+    # Batch size
+    per_device_train_batch_size=8,
+    per_device_eval_batch_size=8,
+    gradient_accumulation_steps=2,     # effective batch size 16
+
+    # Mixed precision
+    fp16=True,                         # faster training
+
+    # Training length
+    num_train_epochs=5,                # shorter to prevent overfitting
+    load_best_model_at_end=True,       # load checkpoint with best validation loss
+    metric_for_best_model="f1",  # choose metric to track best model
+
+    # Misc
+    dataloader_num_workers=4,
+    # logging_steps=100,                 # logs every 100 steps
+    # logging_dir=f"{MODEL_PATH_FINETUNE_1}/logs"
+)
+```
+**Epoch/Steps Result**
+| Step | Training Loss | Validation Loss | Accuracy | F1       |
+|:----:|:-------------:|:---------------:|:--------:|:--------:|
+| 500  | 1.173900      | 0.976532        | 0.581620 | 0.327341 |
+| 1000 | 0.999300      | 0.948569        | 0.601971 | 0.391213 |
+| 1500 | 0.947500      | 0.943873        | 0.595973 | 0.432314 |
+| 2000 | 0.926900      | 0.947065        | 0.599614 | 0.485828 |
+| 2500 | 0.871800      | 0.924963        | 0.621894 | 0.509383 |
+| 3000 | 0.825900      | 0.920582        | 0.619537 | 0.506657 |
+| 3500 | 0.835100      | 0.922539        | 0.611825 | 0.513490 |
+| 4000 | 0.750500      | 0.972919        | 0.606898 | 0.508385 |
+| 4500 | 0.736900      | 0.979380        | 0.617181 | 0.516779 |
+| **5000** | **0.693000** | **1.022871** | **0.617395** | **0.519307** ✅ |
+| 5500 | 0.674700      | 1.026374        | 0.618252 | 0.516804 |
+
+---
+
