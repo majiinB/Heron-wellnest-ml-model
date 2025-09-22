@@ -505,7 +505,7 @@ training_args = TrainingArguments(
 
 ---
 
-## Experiment 5
+## Experiment 6
 
 <details>
 <summary><b>My Notes</b></summary>
@@ -601,3 +601,94 @@ training_args = TrainingArguments(
 
 ---
 
+## Experiment 7
+
+<details>
+<summary><b>My Notes</b></summary>
+
+- Used unbalanced dataset
+- No oversampling was done
+- Trainer used was normal (default)
+- Model more conservative/stable
+- Lower LR sacrifices F1/Accuracy but improves stability
+
+</details>
+
+---
+
+**Date:** 2025-22-09  
+**Model:** `xlm-roberta-base` (Pretrained)  
+
+**Dataset:** `dataset_2_specialize - Sentiment-analysis-for-mental-health.csv`  
+- Split: `train`, `validation`, `test`  
+- Number of samples:  
+  - Train: `25,596` 
+  - Validation: `6,400`  
+  - Test: `8,000`  
+- Preprocessing:  
+  - Min/Max text lengths: `3 - 151`  
+  - Removed rows: `Null and blank values "was removed"`  
+  - Tokenization: `truncation=True, padding="max_length", max_length=256`  
+  - Other transformations: `none`  
+
+**Training Arguments:**  
+```python
+training_args = TrainingArguments(
+    output_dir=MODEL_PATH_FINETUNE_2,
+
+    # Evaluation & saving
+    eval_strategy="steps",             # evaluate more frequently
+    eval_steps=500,                    # evaluate every 500 steps
+    save_strategy="steps",             # save every eval
+    save_steps=500,
+    save_total_limit=3,                # keep last 3 checkpoints
+
+    # Optimizer
+    learning_rate=1e-5,
+    warmup_ratio=0.1,                  # 10% warmup               
+    weight_decay=0.05,                 # helps reduce overfitting
+
+    # Batch size
+    per_device_train_batch_size=8,
+    per_device_eval_batch_size=8,
+    gradient_accumulation_steps=2,     # effective batch size 16
+
+    # Mixed precision
+    fp16=True,                         # faster training
+
+    # Training length
+    num_train_epochs=5,                # shorter to prevent overfitting
+    load_best_model_at_end=True,       # load checkpoint with best validation loss
+    metric_for_best_model="f1",  # choose metric to track best model
+
+    # Misc
+    dataloader_num_workers=4,
+    # logging_steps=100,                 # logs every 100 steps
+    # logging_dir=f"{MODEL_PATH_FINETUNE_1}/logs"
+)
+```
+**Epoch/Steps Result**
+| Step | Training Loss | Validation Loss | Accuracy | F1       |
+|:----:|:-------------:|:---------------:|:--------:|:--------:|
+| 500  | 1.245400      | 0.870412        | 0.644265 | 0.433750 |
+| 1000 | 0.756300      | 0.630176        | 0.758321 | 0.699784 |
+| 1500 | 0.580600      | 0.528566        | 0.793011 | 0.751837 |
+| 2000 | 0.508400      | 0.557222        | 0.770481 | 0.739935 |
+| 2500 | 0.464900      | 0.500221        | 0.800051 | 0.773085 |
+| 3000 | 0.454900      | 0.490921        | 0.800051 | 0.776570 |
+| 3500 | 0.449400      | 0.468674        | 0.814516 | 0.789478 |
+| 4000 | 0.424800      | 0.477303        | 0.816436 | 0.790677 |
+| 4500 | 0.391600      | 0.475732        | 0.810932 | 0.792443 |
+| 5000 | 0.383000      | 0.487995        | 0.812852 | 0.775383 |
+| 5500 | 0.373700      | 0.481023        | 0.819764 | 0.797618 |
+| 6000 | 0.357300      | 0.477357        | 0.816052 | 0.796043 |
+| 6500 | 0.325200      | 0.507498        | 0.817588 | 0.796663 |
+| 7000 | 0.336300      | 0.492060        | 0.822453 | 0.803753 |
+| 7500 | 0.314900      | 0.480440        | 0.825141 | 0.802925 |
+| 8000 | 0.318000      | 0.494568        | 0.818484 | 0.803484 |
+| 8500 | 0.297000      | 0.486042        | 0.827829 | 0.806946 |
+| 9000 | 0.284100      | 0.492883        | 0.824885 | 0.803023 |
+| 9500 | 0.271300      | 0.494665        | 0.824245 | 0.803502 |
+
+
+---
