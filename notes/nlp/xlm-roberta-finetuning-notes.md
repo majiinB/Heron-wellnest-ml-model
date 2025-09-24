@@ -690,13 +690,302 @@ training_args = TrainingArguments(
 | 9000 | 0.284100      | 0.492883        | 0.824885 | 0.803023 |
 | 9500 | 0.271300      | 0.494665        | 0.824245 | 0.803502 |
 
+---
+
+## Experiment 8
+
+<details>
+<summary><b>My Notes</b></summary>
+
+- Used unbalanced dataset
+- Up sampled Anxiety and Stress by sampling the class (4k rows) and paraphrased the rows using ChatGPT
+- The sampled class was also made into taglish version for better tagalog language learning using ChatGPT
+- Trainer used was normal (default)
+- Best Accuracy: 0.8555 at step 9000
+- Best F1: 0.8612 at step 9000
+- Lowest Validation Loss: 0.3817 at step 5500
+- Not the final experiment even if minimum accuracy was reached because the confusion matrix shows that the model is confused between `Depression` and `Suicidal`
+
+</details>
 
 ---
 
-Step	Training Loss	Validation Loss	Accuracy	F1
-500	1.316800	0.918557	0.669483	0.621919
-1000	0.835100	0.885349	0.647465	0.629919
-1500	0.680900	0.627829	0.768561	0.733139
-2000	0.607300	0.564431	0.783922	0.765512
-2500	0.547500	0.632472	0.784434	0.757178
-3000	0.528300	0.570341	0.778930	0.751600
+**Date:** 2025-24-09  
+**Model:** `xlm-roberta-base` (Pretrained)  
+
+**Dataset:** `dataset_2_specialize - combined_cleaned_dataset.csv`  
+- Split: `train`, `validation`, `test`  
+- Number of samples:  
+  - Train: `25,596` 
+  - Validation: `6,400`  
+  - Test: `8,000`  
+- Preprocessing:  
+  - Min/Max text lengths: `3 - 151`  
+  - Removed rows: `Null and blank values "was removed"`  
+  - Tokenization: `truncation=True, padding="max_length", max_length=512`  
+  - Other transformations: `none`  
+
+**Training Arguments:**  
+```python
+training_args = TrainingArguments(
+    output_dir=MODEL_PATH_FINETUNE_2,
+
+    # Evaluation & saving
+    eval_strategy="steps",             # evaluate more frequently
+    eval_steps=500,                    # evaluate every 500 steps
+    save_strategy="steps",             # save every eval
+    save_steps=500,
+    save_total_limit=3,                # keep last 3 checkpoints
+
+    # Optimizer
+    learning_rate=2e-5,
+    warmup_ratio=0.1,                  # 10% warmup               
+    weight_decay=0.05,                 # helps reduce overfitting
+
+    # Batch size
+    per_device_train_batch_size=8,
+    per_device_eval_batch_size=8,
+    gradient_accumulation_steps=2,     # effective batch size 16
+
+    # Mixed precision
+    fp16=True,                         # faster training
+
+    # Training length
+    num_train_epochs=5,                # shorter to prevent overfitting
+    load_best_model_at_end=True,       # load checkpoint with best validation loss
+    metric_for_best_model="f1",  # choose metric to track best model
+
+    # Misc
+    dataloader_num_workers=4,
+    # logging_steps=100,                 # logs every 100 steps
+    # logging_dir=f"{MODEL_PATH_FINETUNE_1}/logs"
+)
+```
+**Epoch/Steps Result**
+| Step  | Training Loss | Validation Loss | Accuracy  | F1       |
+|:-----:|:-------------:|:--------------:|:--------:|:--------:|
+| 500   | 1.2956        | 0.8511         | 0.6418   | 0.5223   |
+| 1000  | 0.6993        | 0.5240         | 0.7930   | 0.7899   |
+| 1500  | 0.5400        | 0.5195         | 0.8061   | 0.8040   |
+| 2000  | 0.4728        | 0.4927         | 0.8159   | 0.8180   |
+| 2500  | 0.4564        | 0.4345         | 0.8233   | 0.8328   |
+| 3000  | 0.4174        | 0.4299         | 0.8360   | 0.8376   |
+| 3500  | 0.4154        | 0.4182         | 0.8375   | 0.8427   |
+| 4000  | 0.3959        | 0.3996         | 0.8398   | 0.8460   |
+| 4500  | 0.3692        | 0.4727         | 0.8322   | 0.8331   |
+| 5000  | 0.3476        | 0.4118         | 0.8360   | 0.8464   |
+| 5500  | 0.3357        | 0.3817         | 0.8494   | 0.8566   |
+| 6000  | 0.3362        | 0.3898         | 0.8438   | 0.8495   |
+| 6500  | 0.3237        | 0.3822         | 0.8493   | 0.8548   |
+| 7000  | 0.2698        | 0.4156         | 0.8462   | 0.8540   |
+| 7500  | 0.2788        | 0.4156         | 0.8470   | 0.8527   |
+| 8000  | 0.2745        | 0.4245         | 0.8495   | 0.8581   |
+| 8500  | 0.2760        | 0.3920         | 0.8478   | 0.8563   |
+| **9000**  | 0.2326        | 0.4193         | **0.8555**   | **0.8612**   |
+
+---
+
+## Experiment 9
+
+<details>
+<summary><b>My Notes</b></summary>
+
+- Up sampled Anxiety and Stress by sampling the class (4k rows) and paraphrased the rows using ChatGPT
+- The sampled class was also made into taglish version for better tagalog language learning using ChatGPT
+- We have taken the rows where the model was confused between Depression and Suicidal from the previous experiment and parphrased it as well as made it into a taglish version before concatenating it again to our dataset. This step will give the model a chance to learn more about how to separate Depression from suicidal.
+- Trainer used was normal (default)
+- Adding paraphrased “confused cases” seems to have helped the model learn the subtle distinctions, as F1 remains high despite some validation loss fluctuations.
+- Small spikes in validation loss (e.g., 4500, 7000, 9500) are likely due to harder examples introduced in batches.
+- Step 8000–9500 looks like a good compromise between accuracy and F1, though the lowest val loss occurs earlier at 6500.
+- Not the final experiment even if minimum accuracy was reached because the confusion matrix shows that the model is still confused between `Depression` and `Suicidal`
+
+</details>
+
+---
+
+**Date:** 2025-24-09  
+**Model:** `xlm-roberta-base` (Pretrained)  
+
+**Dataset:** `dataset_2_specialize - combined_cleaned_dataset_v2.csv`  
+- Split: `train`, `validation`, `test`  
+- Number of samples:  
+  - Train: `25,596` 
+  - Validation: `6,400`  
+  - Test: `8,000`  
+- Preprocessing:  
+  - Min/Max text lengths: `3 - 151`  
+  - Removed rows: `Null and blank values "was removed"`  
+  - Tokenization: `truncation=True, padding="max_length", max_length=512`  
+  - Other transformations: `none`  
+
+**Training Arguments:**  
+```python
+training_args = TrainingArguments(
+    output_dir=MODEL_PATH_FINETUNE_2,
+
+    # Evaluation & saving
+    eval_strategy="steps",             # evaluate more frequently
+    eval_steps=500,                    # evaluate every 500 steps
+    save_strategy="steps",             # save every eval
+    save_steps=500,
+    save_total_limit=3,                # keep last 3 checkpoints
+
+    # Optimizer
+    learning_rate=2e-5,
+    warmup_ratio=0.1,                  # 10% warmup               
+    weight_decay=0.05,                 # helps reduce overfitting
+
+    # Batch size
+    per_device_train_batch_size=8,
+    per_device_eval_batch_size=8,
+    gradient_accumulation_steps=2,     # effective batch size 16
+
+    # Mixed precision
+    fp16=True,                         # faster training
+
+    # Training length
+    num_train_epochs=5,                # shorter to prevent overfitting
+    load_best_model_at_end=True,       # load checkpoint with best validation loss
+    metric_for_best_model="f1",  # choose metric to track best model
+
+    # Misc
+    dataloader_num_workers=4,
+    # logging_steps=100,                 # logs every 100 steps
+    # logging_dir=f"{MODEL_PATH_FINETUNE_1}/logs"
+)
+```
+**Epoch/Steps Result**
+| Step   | Training Loss | Validation Loss | Accuracy  | F1       |
+|:------:|:-------------:|:--------------:|:--------:|:--------:|
+| 500    | 1.2901        | 0.8447         | 0.6755   | 0.6311   |
+| 1000   | 0.6837        | 0.6380         | 0.7446   | 0.7495   |
+| 1500   | 0.5478        | 0.5146         | 0.8011   | 0.8033   |
+| 2000   | 0.4766        | 0.4875         | 0.8040   | 0.8107   |
+| 2500   | 0.4388        | 0.5296         | 0.7942   | 0.8085   |
+| 3000   | 0.4187        | 0.4231         | 0.8260   | 0.8359   |
+| 3500   | 0.3951        | 0.4602         | 0.8279   | 0.8353   |
+| 4000   | 0.3970        | 0.4136         | 0.8300   | 0.8365   |
+| 4500   | 0.3746        | 0.4233         | 0.8364   | 0.8442   |
+| 5000   | 0.3292        | 0.4131         | 0.8408   | 0.8492   |
+| 5500   | 0.3237        | 0.4125         | 0.8347   | 0.8460   |
+| 6000   | 0.3324        | 0.4246         | 0.8361   | 0.8423   |
+| **6500**   | 0.3200        | **0.3905**         | 0.8444   | 0.8550   |
+| 7000   | 0.2869        | 0.4426         | 0.8446   | 0.8500   |
+| 7500   | 0.2551        | 0.4331         | 0.8457   | 0.8552   |
+| **8000**   | 0.2768        | 0.4034         | **0.8509**   | **0.8582**   |
+| 8500   | 0.2656        | 0.4213         | 0.8445   | 0.8521   |
+| 9000   | 0.2551        | 0.4371         | 0.8501   | 0.8577   |
+| 9500   | 0.2146        | 0.4652         | 0.8521   | 0.8599   |
+
+---
+
+## Experiment 10
+
+<details>
+<summary><b>My Notes</b></summary>
+
+- Up sampled Anxiety and Stress by sampling the class (4k rows) and paraphrased the rows using ChatGPT
+- The sampled class was also made into taglish version for better tagalog language learning using ChatGPT
+- We have taken the rows where the model was confused between Depression and Suicidal from the previous experiment and parphrased it as well as made it into a taglish version before concatenating it again to our dataset. This step will give the model a chance to learn more about how to separate Depression from suicidal.
+- Trainer used was weighted trainer
+- Training loss decreases steadily from 1.370 → 0.211, showing good learning.
+- Validation loss fluctuates between 0.389 → 0.457, but overall stays low, indicating the weighted trainer is helping with class imbalance.
+- Lowest validation loss: 0.3838 at step 5000, which is slightly earlier than the best F1/accuracy steps.
+- Accuracy improves from 62.09% → 84.90%, reaching the 85%+ target range in the later steps.
+- F1 steadily increases from 0.600 → 0.857, showing the weighted trainer effectively improves performance on minority classes. 
+- Weighted trainer stabilized F1 and accuracy on challenging classes (like distinguishing depression vs suicidal).
+- This will be the first acceptable model. Even though in training it only reached 84% accuracy. During the test it reached 85% accross all metrics (accuracy, macro-f1, precision, recall)
+
+</details>
+
+---
+
+**Date:** 2025-24-09  
+**Model:** `xlm-roberta-base` (Pretrained)  
+
+**Dataset:** `dataset_2_specialize - combined_cleaned_dataset_v3.csv`  
+- Split: `train`, `validation`, `test`  
+- Number of samples:  
+  - Train: `25,596` 
+  - Validation: `6,400`  
+  - Test: `8,000`  
+- Preprocessing:  
+  - Min/Max text lengths: `3 - 151`  
+  - Removed rows: `Null and blank values "was removed"`  
+  - Tokenization: `truncation=True, padding="max_length", max_length=512`  
+  - Other transformations: `none`  
+
+**Training Arguments:**  
+```python
+training_args = TrainingArguments(
+    output_dir=MODEL_PATH_FINETUNE_2,
+
+    # Evaluation & saving
+    eval_strategy="steps",             # evaluate more frequently
+    eval_steps=500,                    # evaluate every 500 steps
+    save_strategy="steps",             # save every eval
+    save_steps=500,
+    save_total_limit=3,                # keep last 3 checkpoints
+
+    # Optimizer
+    learning_rate=2e-5,
+    warmup_ratio=0.1,                  # 10% warmup               
+    weight_decay=0.05,                 # helps reduce overfitting
+
+    # Batch size
+    per_device_train_batch_size=8,
+    per_device_eval_batch_size=8,
+    gradient_accumulation_steps=2,     # effective batch size 16
+
+    # Mixed precision
+    fp16=True,                         # faster training
+
+    # Training length
+    num_train_epochs=5,                # shorter to prevent overfitting
+    load_best_model_at_end=True,       # load checkpoint with best validation loss
+    metric_for_best_model="f1",  # choose metric to track best model
+
+    # Misc
+    dataloader_num_workers=4,
+    # logging_steps=100,                 # logs every 100 steps
+    # logging_dir=f"{MODEL_PATH_FINETUNE_1}/logs"
+)
+```
+**Epoch/Steps Result**
+| Step    | Training Loss | Validation Loss | Accuracy  | F1       |
+|:-------:|:-------------:|:--------------:|:--------:|:--------:|
+| 500     | 1.3698        | 0.9145         | 0.6209   | 0.6005   |
+| 1000    | 0.7304        | 0.6278         | 0.7460   | 0.7564   |
+| 1500    | 0.5534        | 0.4817         | 0.7898   | 0.7994   |
+| 2000    | 0.4997        | 0.5185         | 0.7612   | 0.7768   |
+| 2500    | 0.4469        | 0.4311         | 0.8262   | 0.8261   |
+| 3000    | 0.4046        | 0.4154         | 0.8318   | 0.8366   |
+| 3500    | 0.3932        | 0.4051         | 0.8202   | 0.8281   |
+| 4000    | 0.4098        | 0.3925         | 0.8366   | 0.8394   |
+| 4500    | 0.3803        | 0.3896         | 0.8446   | 0.8496   |
+| **5000**    | 0.3212        | **0.3838**         | 0.8454   | 0.8509   |
+| 5500    | 0.3328        | 0.4161         | 0.8407   | 0.8476   |
+| 6000    | 0.3219        | 0.3886         | 0.8408   | 0.8435   |
+| **6500**    | 0.3211        | 0.3866         | **0.8485**   | 0.8534   |
+| 7000    | 0.2628        | 0.4247         | 0.8455   | 0.8481   |
+| 7500    | 0.2542        | 0.4358         | 0.8474   | 0.8521   |
+| 8000    | 0.2558        | 0.4116         | 0.8481   | 0.8549   |
+| 8500    | 0.2677        | 0.3944         | 0.8468   | 0.8542   |
+| 9000    | 0.2334        | 0.4227         | 0.8493   | **0.8570**   |
+| 9500    | 0.1974        | 0.4513         | 0.8470   | 0.8553   |
+| 10000   | 0.2108        | 0.4570         | 0.8490   | 0.8569   |
+
+### **Dataset Baseline**
+![baseline](images/baseline_exp_10.png)
+
+### **Classification Metrics**
+- **Accuracy**:  0.8520
+- **F1 Score**:  0.8588
+- **Recall**:    0.8668
+- **Precision**: 0.8549
+
+![model_performance_metric](images/model_performance_metric_exp_10.png)
+
+### **Confusion Matrix**
+![confusion_matrix_num](images/confusion_matrix_num_exp_10.png)
+![confusion_matrix_percent](images/confusion_matrix_percent_exp.10.png)
